@@ -21,6 +21,7 @@ from homeassistant.const import (
     PRECISION_TENTHS,
     PRECISION_HALVES,
     PRECISION_WHOLE,
+    UnitOfTemperature
 )
 from homeassistant.core import HomeAssistant, Event, EventStateChangedData, callback
 from homeassistant.helpers.event import async_track_state_change_event
@@ -138,6 +139,10 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
         self._current_humidity = None
 
         self._unit = hass.config.units.temperature_unit
+
+        if self._unit == UnitOfTemperature.FAHRENHEIT:
+            self._min_temperature = self._celsius_to_fahrenheit(self._min_temperature)
+            self._max_temperature = self._celsius_to_fahrenheit(self._max_temperature)
 
         # Supported features
         self._support_flags = SUPPORT_FLAGS
@@ -323,6 +328,12 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
         await self.send_command(
             hvac_mode, self._fan_mode, self._swing_mode, self._target_temperature
         )
+    
+    def _celsius_to_fahrenheit(self, temperature):
+        return round(temperature * 9 / 5) + 32
+
+    def _fahrenheit_to_celsius(self, temperature):
+        return round((temperature - 32) * 5 / 9)
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
@@ -386,6 +397,9 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
         async with self._temp_lock:
             try:
                 target_temperature = "{0:g}".format(temperature)
+
+                if self._unit == UnitOfTemperature.FAHRENHEIT:
+                    target_temperature = "{0:g}".format(self._fahrenheit_to_celsius(self._target_temperature))
 
                 if hvac_mode == HVACMode.OFF:
                     if (
