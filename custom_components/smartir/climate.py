@@ -491,14 +491,37 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
     async def _send_command(self, state, hvac_mode, fan_mode, swing_mode, temperature):
         async with self._temp_lock:
 
-            target_temperature = str(
-                display_temp(
-                    self.hass,
-                    temperature,
-                    self._data_temperature_unit,
-                    self._precision,
+            if isinstance(temperature, str):
+                target_temperature = str(
+                    display_temp(
+                        self.hass,
+                        temperature,
+                        self._data_temperature_unit,
+                        self._precision,
+                    )
                 )
-            )
+            elif isinstance(temperature, dict):
+                if state == STATE_OFF:
+                    target_temperature = temperature.get('on')
+                    if not target_temperature:
+                        _LOGGER.error("Missing 'on' field in temperature object for off state.")
+                        return
+                else:
+                    target_temperature = temperature.get('regular')
+                    if not target_temperature:
+                        _LOGGER.error("Missing 'regular' field in temperature object for on state.")
+                        return
+                target_temperature = str(
+                    display_temp(
+                        self.hass,
+                        target_temperature,
+                        self._data_temperature_unit,
+                        self._precision,
+                    )
+                )
+            else:
+                _LOGGER.error("Temperature must be either a string or a dictionary.")
+                return
 
             if self._power_sensor and self._state != state:
                 self._async_power_sensor_check_schedule(state)
@@ -622,6 +645,7 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
 
             except Exception as e:
                 _LOGGER.exception(e)
+
 
     async def _async_temp_sensor_changed(
         self, event: Event[EventStateChangedData]
