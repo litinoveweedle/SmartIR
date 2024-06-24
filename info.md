@@ -1,8 +1,8 @@
 # ⏻ Smart IR
 
 [![HACS Badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![License](https://img.shields.io/github/license/litinoveweedle/smartir?style=for-the-badge)](https://github.com/litinoveweedle/smartir/blob/main/LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/litinoveweedle/smartir?style=for-the-badge)](https://github.com/litinoveweedle/smartir/releases)
+[![License](https://img.shields.io/github/license/klimofey/smartir?style=for-the-badge)](https://github.com/klimofey/smartir/blob/master/LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/klimofey/smartir?style=for-the-badge)](https://github.com/klimofey/smartir/releases)
 [![Code style](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge)](https://github.com/psf/black)
 
 ## Overview
@@ -31,4 +31,4 @@ If you use any own/custom codes json files please backup such json files before 
 
 ## Documentation ##
 
-[Read the documents for detailed instructions on how to configure SmartIR.](https://github.com/litinoveweedle/SmartIR/)
+[Read the documents for detailed instructions on how to configure SmartIR.](https://github.com/klimofey/SmartIR/)

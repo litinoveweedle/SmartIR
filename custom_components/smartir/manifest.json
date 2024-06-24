@@ -1,11 +1,11 @@
 {
   "domain": "smartir",
   "name": "SmartIR",
-  "codeowners": ["@smartHomeHub", "@litinoveweedle"],
+  "codeowners": ["@smartHomeHub", "@litinoveweedle", "@klimofey"],
   "dependencies": [],
-  "documentation": "https://github.com/litinoveweedle/SmartIR",
+  "documentation": "https://github.com/klimofey/SmartIR",
   "iot_class": "assumed_state",
-  "issue_tracker": "https://github.com/litinoveweedle/SmartIR/issues",
+  "issue_tracker": "https://github.com/klimofey/SmartIR/issues",
   "requirements": ["aiofiles>=0.6.0"],
-  "version": "0.0.0"
+  "version": "1.17.17"
 }

@@ -3,7 +3,7 @@ name: "Validate"
 on:
   push:
     branches:
-      - "main"
+      - "master"
       - "feat**"
     tags-ignore:
       - "**"

@@ -1,8 +1,8 @@
 # ⏻ Smart IR
 
 [![HACS Badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![License](https://img.shields.io/github/license/litinoveweedle/smartir?style=for-the-badge)](https://github.com/litinoveweedle/smartir/blob/main/LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/litinoveweedle/smartir?style=for-the-badge)](https://github.com/litinoveweedle/smartir/releases)
+[![License](https://img.shields.io/github/license/klimofey/smartir?style=for-the-badge)](https://github.com/klimofey/smartir/blob/master/LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/klimofey/smartir?style=for-the-badge)](https://github.com/klimofey/smartir/releases)
 [![Code style](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge)](https://github.com/psf/black)
 
 ## Overview
@@ -31,7 +31,7 @@ If you use any own/custom codes json files please backup such json files before 
 
 ## Installation
 ### *HACS*
-If you want HACS to handle installation and updates, add SmartIR url `https://github.com/litinoveweedle/SmartIR` as a [custom repository](https://hacs.xyz/docs/faq/custom_repositories/) in the HACS. This is preffered instalation method as it would allow for automatic updates.
+If you want HACS to handle installation and updates, add SmartIR url `https://github.com/klimofey/SmartIR` as a [custom repository](https://hacs.xyz/docs/faq/custom_repositories/) in the HACS. This is preffered instalation method as it would allow for automatic updates.
 
 ### *Manual*
 Download latest smartir.zip file and place it's content in the `custom_components` folder in your HomeAssistant configuration `custom_component/smartir` directory.
@@ -68,7 +68,7 @@ The resulting directory structure should look similar to this:
 ```
 
 ## Device Data - IR Codes
-To properly function, specification of your controlled device data including IR codes shall exists either in `codes` or in `custom_codes` directory as a .JSON file. When installed both using HACS or manual method, `codes` directory is populated by device data files maintained by this project. If you would like to create your own device data file, place it in the `custom_codes` class `climate|fan|media_player` subdirectory, this directory is persistent and will be manitained accross HACS updates. **Please don't forget to create [PR](https://github.com/litinoveweedle/SmartIR/pulls) for this new device data file and I will try to include it in a new releases.**
+To properly function, specification of your controlled device data including IR codes shall exists either in `codes` or in `custom_codes` directory as a .JSON file. When installed both using HACS or manual method, `codes` directory is populated by device data files maintained by this project. If you would like to create your own device data file, place it in the `custom_codes` class `climate|fan|media_player` subdirectory, this directory is persistent and will be manitained accross HACS updates. **Please don't forget to create [PR](https://github.com/klimofey/SmartIR/pulls) for this new device data file and I will try to include it in a new releases.**
 
 ## Platform setup instructions
 Click on the links below for instructions on how to configure each platform.
