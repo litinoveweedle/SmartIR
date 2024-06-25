@@ -6,6 +6,7 @@
         "RC-3"
     ],
     "supportedController": "UFOR11",
+    "disable_sending_commands_when_device_off": true,
     "commandsEncoding": "Raw",
     "temperatureUnit": "C",
     "minTemperature": 16.0,
