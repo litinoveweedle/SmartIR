@@ -322,7 +322,7 @@ Contributing to your own code files is welcome. However, we do not accept incomp
 | [1286](../codes/climate/1286.json) | AR-JE5 (Remote control)                                                 | Broadlink   |
 | [1287](../codes/climate/1287.json) | AR-REB1E (Remote control)<br>AR-REM7E<br>AR-REW2E                       | Broadlink   |
 | [1288](../codes/climate/1288.json) | AR-REB1E (Remote control)                                               | Broadlink   |
-| [1289](../codes/climate/1289.json) | AR-REW1E (Remote control)                                               | Broadlink   |
+| [1289](../codes/climate/1289.json) | AR-REW1E (Remote control) - <b>vertical and horizontal swing support</b><br>AR-RY12<br>AR-REW1U            | Broadlink   |
 | [1290](../codes/climate/1290.json) | AR-RFL7J (Remote control)                                               | Broadlink   |
 | [1291](../codes/climate/1291.json) | AR-REF1E (Remote control)                                               | Broadlink   |
 | [1292](../codes/climate/1292.json) | AR-RY12 (Remote control) - <b>vertical and horizontal swing support</b> | Broadlink   |
