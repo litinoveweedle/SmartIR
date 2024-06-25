@@ -48,6 +48,13 @@ CONF_POWER_SENSOR = "power_sensor"
 CONF_POWER_SENSOR_DELAY = "power_sensor_delay"
 CONF_POWER_SENSOR_RESTORE_STATE = "power_sensor_restore_state"
 
+CONF_DISABLE_SENDING_COMMANDS_WHEN_DEVICE_OFF = (
+    "disable_sending_commands_when_device_off"
+)
+
+CONF_CODE_ON_NAME = "on"
+CONF_CODE_REGULAR_NAME = "regular"
+
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_UNIQUE_ID): cv.string,
@@ -92,6 +99,11 @@ async def async_setup_platform(
         _LOGGER.error("SmartIR climate device data init failed!")
         return
 
+    # Make disable_sending_off_when_device_off optional
+    device_data[CONF_DISABLE_SENDING_COMMANDS_WHEN_DEVICE_OFF] = device_data.get(
+        CONF_DISABLE_SENDING_COMMANDS_WHEN_DEVICE_OFF, False
+    )
+
     async_add_entities([SmartIRClimate(hass, config, device_data)])
 
 
@@ -116,6 +128,7 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
         self._power_sensor = config.get(CONF_POWER_SENSOR)
         self._power_sensor_delay = config.get(CONF_POWER_SENSOR_DELAY)
         self._power_sensor_restore_state = config.get(CONF_POWER_SENSOR_RESTORE_STATE)
+
         self._temperature_unit = hass.config.units.temperature_unit
 
         self._state = STATE_UNKNOWN
@@ -139,6 +152,9 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
         self._supported_controller = device_data["supportedController"]
         self._commands_encoding = device_data["commandsEncoding"]
         self._commands = device_data["commands"]
+        self._disable_sending_commands_when_device_off = device_data[
+            CONF_DISABLE_SENDING_COMMANDS_WHEN_DEVICE_OFF
+        ]
 
         # device temperature units
         self._data_temperature_unit = UnitOfTemperature.CELSIUS
@@ -489,6 +505,15 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
         await self.async_set_hvac_mode(self._hvac_mode)
 
     async def _send_command(self, state, hvac_mode, fan_mode, swing_mode, temperature):
+        _LOGGER.error(
+            "_send_command \nself._state: %s \nstate: %s \nhvac_mode: %s \nfan_mode: %s \nswing_mode: %s \ntemperature: %s",
+            self._state,
+            state,
+            hvac_mode,
+            fan_mode,
+            swing_mode,
+            temperature,
+        )
         async with self._temp_lock:
 
             target_temperature = str(
@@ -502,6 +527,13 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
 
             if self._power_sensor and self._state != state:
                 self._async_power_sensor_check_schedule(state)
+
+            if (
+                state == STATE_OFF
+                and self._state == STATE_OFF
+                and self._disable_sending_commands_when_device_off
+            ):
+                return
 
             try:
                 if state == STATE_OFF:
@@ -593,9 +625,28 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
                             and target_temperature
                             in self._commands[hvac_mode][fan_mode].keys()
                         ):
-                            await self._controller.send(
-                                self._commands[hvac_mode][fan_mode][target_temperature]
-                            )
+                            # some devices have a special code for turning on the device with the last settings
+                            if isinstance(
+                                self._commands[hvac_mode][fan_mode][target_temperature],
+                                dict,
+                            ):
+                                # if now state is off, use the "on" code, otherwise use the "regular" code
+                                command_name = (
+                                    CONF_CODE_ON_NAME
+                                    if self._state == STATE_OFF
+                                    else CONF_CODE_REGULAR_NAME
+                                )
+                                await self._controller.send(
+                                    self._commands[hvac_mode][fan_mode][
+                                        target_temperature
+                                    ][command_name]
+                                )
+                            else:
+                                await self._controller.send(
+                                    self._commands[hvac_mode][fan_mode][
+                                        target_temperature
+                                    ]
+                                )
                         elif hvac_mode == HVACMode.FAN_ONLY and isinstance(
                             self._commands[hvac_mode][fan_mode], str
                         ):
