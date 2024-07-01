@@ -140,6 +140,7 @@ Contributing to your own code files is welcome. However, we do not accept incomp
 | ------------------------------ | ---------------- | ------------------------------------------------------------- | ---------- |
 | [1160](../codes/fan/1160.json) | Efficio          |                                                               | Broadlink  |
 | [1170](../codes/fan/1170.json) | Renesa           | Speeds `1,2,3,4,5` is mapped to `2,3,4,5,Boost` on the remote | Broadlink  |
+| [1818](../codes/fan/1818.json) | Studio+          | Should also work on other models with similar remote          | MQTT       |
 
 #### Lucci Air
 
