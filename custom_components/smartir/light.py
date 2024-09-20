@@ -363,7 +363,6 @@ class SmartIRLight(LightEntity, RestoreEntity):
 
     @callback
     async def _async_power_sensor_changed(self, event):
-    ):
         """Handle power sensor changes."""
         new_state = event.data["new_state"]
         if new_state is None:
