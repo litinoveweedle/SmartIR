@@ -6,7 +6,9 @@
 [![Code style](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge)](https://github.com/psf/black)
 
 ## Overview
+
 SmartIR is a custom integration for controlling **climate devices**, **media players**, **fans** and **lights** via infrared controllers.
+
 SmartIR currently supports the following controllers:
 
 - [Broadlink](https://www.home-assistant.io/integrations/broadlink/)
@@ -81,6 +83,7 @@ To properly function, specification of your controlled device data including IR 
 ## Platform setup instructions
 
 Click on the links below for instructions on how to configure each platform.
+
 * [Climate platform](/docs/CLIMATE.md)
 * [Media Player platform](/docs/MEDIA_PLAYER.md)
 * [Fan platform](/docs/FAN.md)
