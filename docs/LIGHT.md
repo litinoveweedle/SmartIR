@@ -1,18 +1,17 @@
-<p align="center">
-    <a href="#"><img src="assets/smartir_light.png" width="350" alt="SmartIR light"></a>
-</p>
+# SmartIR Light
 
-For this platform to work, we need a .json file containing all the necessary IR or RF commands.
-Find your device's brand code [here](LIGHT.md#available-codes-for-light-devices) and add the number in the `device_code` field. The component will download it to the correct folder.  If your device is not working, you will need to learn your own codes and place the .json file in `smartir/codes/fan` subfolders. Please note that the `device_code` field only accepts positive numbers. The .json extension is not required.
+Find your device's brand code [here](LIGHT_CODES.md) and add the number in the `device_code` field. If your device is not supported, you will need to learn your own IR codes and place them in the Json file in `smartir/custom_codes/light` subfolder. Please refer to [this guide](CODES_SYNTAX.md) to find a way how to do it. Once you have working device file please do not forgot to submit Pull Request so it could be inherited to this project for other users.
 
 ## Configuration variables
 
-**name** (Optional): The name of the device<br />
-**nuique_id** (Optional): An ID that uniquely identified this device. If two devices have the same unique ID, Home Assistant will raise an exception.<br />
-**device_code** (Required): ...... (Accepts only positive numbers)<br />
-**controller_data** (Required): The data required for the controller to function. Enter the entity_id of the Broadlink or Xiaomi IR controller, or the MQTT topic on which to send commands.<br />
-**delay** (Optional): Adjusts the delay in seconds between multiple commands. The default is 0.5 <br />
-**power_sensor** (Optional): *entity_id* for a sensor that monitors whether your device is actually On or Off. This may be a power monitor sensor. (Accepts only on/off states)<br />
+| Name                         |  Type   | Default  | Description   |
+| --- | :---: | :---: | --- |
+| `name` | string | optional | The name of the device |
+| `unique_id` | string | optional | An ID that uniquely identified this device. If two devices have the same unique ID, Home Assistant will raise an exception. |
+| `device_code` | number | required | (Accepts only positive numbers) |
+| `controller_data` | string | required | The data required for the controller to function. Look into configuration examples below for valid configuration entries for different controller types. |
+|  `delay` | number | optional | Adjusts the delay in seconds between multiple commands. The default is 0.5 |
+|  `power_sensor` | string | optional | _entity_id_ for a sensor or that monitors whether your device is actually On or Off. This may be a power monitor sensor, or a helper that monitors power usage with a threshold. (Accepts only on/off states) |
 
 ## Example (using broadlink controller)
 
@@ -44,30 +43,5 @@ separate small and dim nightlight bulb inside the fixture).
 
 ## Available codes for Light devices
 
-The following are the code files created by the amazing people in the community. Before you start creating your own code file, try if one of them works for your device. **Please open an issue if your device is working and not included in the supported models.**
-Contributing your own code files is welcome. However, we do not accept incomplete files as well as files related to MQTT controllers.
+[**Light codes**](/docs/LIGHT_CODES.md)
 
-#### Iris Ohyama
-
-| Code                             | Supported Models | Controller |
-|----------------------------------|------------------|------------|
-| [1000](../codes/light/1000.json) | LEDHCL-R2        | Broadlink  |
-
-#### NEC
-
-| Code                             | Supported Models | Controller |
-|----------------------------------|------------------|------------|
-| [1020](../codes/light/1020.json) | RE0201 CH1       | Broadlink  |
-| [1021](../codes/light/1021.json) | RE0201 CH2       | Broadlink  |
-
-#### Toshiba
-
-| Code                             | Supported Models | Controller |
-|----------------------------------|------------------|------------|
-| [1040](../codes/light/1040.json) | FRC-199T         | Broadlink  |
-
-#### Takizumi
-
-| Code                             | Supported Models | Controller |
-|----------------------------------|------------------|------------|
-| [1060](../codes/light/1060.json) | TLR-002          | Broadlink  |
