@@ -5,9 +5,33 @@ import os.path
 import hashlib
 import json
 
+from homeassistant.exceptions import TemplateError
+from homeassistant.core import Event, EventStateChangedData, callback
+from homeassistant.const import (
+    STATE_ON,
+    STATE_OFF,
+)
+from homeassistant.helpers.template import result_as_boolean
+from homeassistant.helpers.event import async_call_later
 from .controller_const import CONTROLLER_SUPPORT
 
+
 _LOGGER = logging.getLogger(__name__)
+
+DEFAULT_DELAY = 0.5
+DEFAULT_POWER_SENSOR_DELAY = 10
+
+CONF_UNIQUE_ID = "unique_id"
+CONF_DEVICE_CODE = "device_code"
+CONF_CONTROLLER_DATA = "controller_data"
+CONF_DELAY = "delay"
+CONF_POWER_SENSOR = "power_sensor"
+CONF_POWER_TEMPLATE = "power_template"
+CONF_POWER_SENSOR_DELAY = "power_sensor_delay"
+CONF_POWER_RESTORE_STATE = "power_restore_state"
+CONF_AVAILABILITY_SENSOR = "availability_sensor"
+CONF_AVAILABILITY_TEMPLATE = "availability_template"
+CONF_AVAILABILITY_WHEN_ON = "availability_when_on"
 
 
 class DeviceData:
@@ -555,19 +579,111 @@ class DeviceData:
         else:
             return None
 
-    # find the closest match in a sorted list
-    @staticmethod
-    def closest_match(value, list):
-        prev_val = None
-        for index, entry in enumerate(list):
-            if entry > (value or 0):
-                if prev_val is None:
-                    return index
-                diff_lo = value - prev_val
-                diff_hi = entry - value
-                if diff_lo < diff_hi:
-                    return index - 1
-                return index
-            prev_val = entry
 
-        return len(list) - 1
+class SmartIR:
+    @staticmethod
+    async def _async_power_sensor_changed(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        """Handle power sensor changes."""
+        old_state = event.data["old_state"]
+        new_state = event.data["new_state"]
+        if new_state is None:
+            return
+
+        if old_state is not None and new_state.state == old_state.state:
+            return
+
+        if new_state.state == STATE_ON and self._state != STATE_ON:
+            self._state = STATE_ON
+            self._on_by_remote = True
+            await self._async_update_hvac_action()
+        elif new_state.state == STATE_OFF:
+            self._on_by_remote = False
+            if self._state != STATE_OFF:
+                self._state = STATE_OFF
+                await self._async_update_hvac_action()
+        self.async_write_ha_state()
+
+    @staticmethod
+    async def _async_power_template_changed(self, result: bool):
+        """Handle availability template changes."""
+        if isinstance(result, TemplateError):
+            return
+
+        result = result_as_boolean(result)
+        if result != self._availability:
+            if result:
+                self._state = STATE_ON
+                self._on_by_remote = True
+            else:
+                self._state = STATE_OFF
+                self._on_by_remote = False
+            self.async_write_ha_state()
+
+    @staticmethod
+    async def _async_availability_sensor_changed(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        """Handle availability sensor changes."""
+        old_state = event.data["old_state"]
+        new_state = event.data["new_state"]
+        if new_state is None:
+            return
+
+        if old_state is not None and new_state.state == old_state.state:
+            return
+
+        result = result_as_boolean(result)
+        if result != self._availability:
+            self._availability = result
+            self.async_write_ha_state()
+
+    @staticmethod
+    async def _async_availability_template_changed(self, result: str | TemplateError):
+        """Handle availability template changes."""
+        if isinstance(result, TemplateError):
+            return
+        result = result_as_boolean(result)
+        if result != self._availability:
+            self._availability = result
+            self.async_write_ha_state()
+
+    @callback
+    def _async_power_sensor_check_schedule(self, state):
+        if self._power_sensor_check_cancel:
+            self._power_sensor_check_cancel()
+            self._power_sensor_check_cancel = None
+            self._power_sensor_check_expect = None
+
+        @callback
+        def _async_power_sensor_check(*_):
+            self._power_sensor_check_cancel = None
+            expected_state = self._power_sensor_check_expect
+            self._power_sensor_check_expect = None
+            current_state = getattr(
+                self.hass.states.get(self._power_sensor), "state", None
+            )
+            _LOGGER.debug(
+                "Executing power sensor check for expected state '%s', current state '%s'.",
+                expected_state,
+                current_state,
+            )
+
+            if (
+                expected_state in [STATE_ON, STATE_OFF]
+                and current_state in [STATE_ON, STATE_OFF]
+                and expected_state != current_state
+            ):
+                self._state = current_state
+                _LOGGER.debug(
+                    "Power sensor check failed, reverted device state to '%s'.",
+                    self._state,
+                )
+                self.async_write_ha_state()
+
+        self._power_sensor_check_expect = state
+        self._power_sensor_check_cancel = async_call_later(
+            self.hass, self._power_sensor_delay, _async_power_sensor_check
+        )
+        _LOGGER.debug("Scheduled power sensor check for '%s' state", state)

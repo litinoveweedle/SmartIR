@@ -8,29 +8,41 @@ from homeassistant.components.media_player.const import (
     MediaPlayerEntityFeature,
     MediaType,
 )
-from homeassistant.const import CONF_NAME, STATE_OFF, STATE_ON, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, Event, EventStateChangedData, callback
-from homeassistant.helpers.event import async_track_state_change_event, async_call_later
+from homeassistant.components.template.template_entity import TemplateEntity
+from homeassistant.const import (
+    CONF_NAME,
+    STATE_OFF,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+)
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import async_track_state_change_event
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
-from . import DeviceData
+from . import (
+    SmartIR,
+    DeviceData,
+    DEFAULT_DELAY,
+    DEFAULT_POWER_SENSOR_DELAY,
+    CONF_UNIQUE_ID,
+    CONF_DEVICE_CODE,
+    CONF_CONTROLLER_DATA,
+    CONF_DELAY,
+    CONF_POWER_SENSOR,
+    CONF_POWER_TEMPLATE,
+    CONF_POWER_SENSOR_DELAY,
+    CONF_POWER_RESTORE_STATE,
+    CONF_AVAILABILITY_SENSOR,
+    CONF_AVAILABILITY_TEMPLATE,
+    CONF_AVAILABILITY_WHEN_ON,
+)
 from .controller import get_controller, get_controller_schema
 
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = "SmartIR Media Player"
 DEFAULT_DEVICE_CLASS = "tv"
-DEFAULT_DELAY = 0.5
-DEFAULT_POWER_SENSOR_DELAY = 10
-
-CONF_UNIQUE_ID = "unique_id"
-CONF_DEVICE_CODE = "device_code"
-CONF_CONTROLLER_DATA = "controller_data"
-CONF_DELAY = "delay"
-CONF_POWER_SENSOR = "power_sensor"
-CONF_POWER_SENSOR_DELAY = "power_sensor_delay"
-CONF_POWER_SENSOR_RESTORE_STATE = "power_sensor_restore_state"
 CONF_SOURCE_NAMES = "source_names"
 CONF_DEVICE_CLASS = "device_class"
 
@@ -42,10 +54,14 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required(CONF_CONTROLLER_DATA): get_controller_schema(vol, cv),
         vol.Optional(CONF_DELAY, default=DEFAULT_DELAY): cv.positive_float,
         vol.Optional(CONF_POWER_SENSOR): cv.entity_id,
+        vol.Optional(CONF_POWER_TEMPLATE): cv.template,
         vol.Optional(
             CONF_POWER_SENSOR_DELAY, default=DEFAULT_POWER_SENSOR_DELAY
         ): cv.positive_int,
-        vol.Optional(CONF_POWER_SENSOR_RESTORE_STATE, default=True): cv.boolean,
+        vol.Optional(CONF_POWER_RESTORE_STATE, default=True): cv.boolean,
+        vol.Optional(CONF_AVAILABILITY_SENSOR): cv.entity_id,
+        vol.Optional(CONF_AVAILABILITY_TEMPLATE): cv.template,
+        vol.Optional(CONF_AVAILABILITY_WHEN_ON, default=False): cv.boolean,
         vol.Optional(CONF_SOURCE_NAMES): dict,
         vol.Optional(CONF_DEVICE_CLASS, default=DEFAULT_DEVICE_CLASS): cv.string,
     }
@@ -71,7 +87,7 @@ async def async_setup_platform(
     async_add_entities([SmartIRMediaPlayer(hass, config, device_data)])
 
 
-class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
+class SmartIRMediaPlayer(SmartIR, MediaPlayerEntity, TemplateEntity, RestoreEntity):
     _attr_should_poll = False
     _attr_assumed_state = True
 
@@ -83,8 +99,12 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
         self._controller_data = config.get(CONF_CONTROLLER_DATA)
         self._delay = config.get(CONF_DELAY)
         self._power_sensor = config.get(CONF_POWER_SENSOR)
+        self._power_template = config.get(CONF_POWER_TEMPLATE)
         self._power_sensor_delay = config.get(CONF_POWER_SENSOR_DELAY)
-        self._power_sensor_restore_state = config.get(CONF_POWER_SENSOR_RESTORE_STATE)
+        self._power_sensor_restore_state = config.get(CONF_POWER_RESTORE_STATE)
+        self._availability_sensor = config.get(CONF_AVAILABILITY_SENSOR)
+        self._availability_template = config.get(CONF_AVAILABILITY_TEMPLATE)
+        self._availability_when_on = config.get(CONF_AVAILABILITY_WHEN_ON)
         self._device_class = config.get(CONF_DEVICE_CLASS)
 
         self._state = STATE_OFF
@@ -185,6 +205,29 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
             async_track_state_change_event(
                 self.hass, self._power_sensor, self._async_power_sensor_changed
             )
+        elif self._power_template:
+            self.add_template_attribute(
+                "_power_sensor",
+                self._power_template,
+                None,
+                self._async_power_template_changed,
+                none_on_template_error=True,
+            )
+
+        if self._availability_sensor:
+            async_track_state_change_event(
+                self.hass,
+                self._availability_sensor,
+                self._async_availability_sensor_changed,
+            )
+        elif self._availability_template:
+            self.add_template_attribute(
+                "_availability",
+                self._availability_template,
+                None,
+                self._async_availability_template_changed,
+                none_on_template_error=True,
+            )
 
     @property
     def should_poll(self):
@@ -209,7 +252,12 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
     @property
     def state(self):
         """Return the state of the player."""
-        return self._state
+        if not self._availability and (
+            self._availability_when_on or self._state == STATE_OFF
+        ):
+            return STATE_UNAVAILABLE
+        else:
+            return self._state
 
     @property
     def media_title(self):
@@ -350,64 +398,3 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
                 _LOGGER.exception(
                     "Exception raised in the in the _send_command '%s'", e
                 )
-
-    async def _async_power_sensor_changed(
-        self, event: Event[EventStateChangedData]
-    ) -> None:
-        """Handle power sensor changes."""
-        old_state = event.data["old_state"]
-        new_state = event.data["new_state"]
-        if new_state is None:
-            return
-
-        if old_state is not None and new_state.state == old_state.state:
-            return
-
-        if new_state.state == STATE_ON and self._state != STATE_ON:
-            self._on_by_remote = True
-            self._state = STATE_ON
-        elif new_state.state == STATE_OFF:
-            self._on_by_remote = False
-            if self._state != STATE_OFF:
-                self._state = STATE_OFF
-                # self._source = None
-        self.async_write_ha_state()
-
-    @callback
-    def _async_power_sensor_check_schedule(self, state):
-        if self._power_sensor_check_cancel:
-            self._power_sensor_check_cancel()
-            self._power_sensor_check_cancel = None
-            self._power_sensor_check_expect = None
-
-        @callback
-        def _async_power_sensor_check(*_):
-            self._power_sensor_check_cancel = None
-            expected_state = self._power_sensor_check_expect
-            self._power_sensor_check_expect = None
-            current_state = getattr(
-                self.hass.states.get(self._power_sensor), "state", None
-            )
-            _LOGGER.debug(
-                "Executing power sensor check for expected state '%s', current state '%s'.",
-                expected_state,
-                current_state,
-            )
-
-            if (
-                expected_state in [STATE_ON, STATE_OFF]
-                and current_state in [STATE_ON, STATE_OFF]
-                and expected_state != current_state
-            ):
-                self._state = current_state
-                _LOGGER.debug(
-                    "Power sensor check failed, reverted device state to '%s'.",
-                    self._state,
-                )
-                self.async_write_ha_state()
-
-        self._power_sensor_check_expect = state
-        self._power_sensor_check_cancel = async_call_later(
-            self.hass, self._power_sensor_delay, _async_power_sensor_check
-        )
-        _LOGGER.debug("Scheduled power sensor check for '%s' state.", state)
