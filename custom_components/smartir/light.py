@@ -26,14 +26,14 @@ from . import (
     SmartIR,
     DeviceData,
     DEFAULT_DELAY,
-    DEFAULT_POWER_SENSOR_DELAY,
+    DEFAULT_POWER_DELAY,
     CONF_UNIQUE_ID,
     CONF_DEVICE_CODE,
     CONF_CONTROLLER_DATA,
     CONF_DELAY,
     CONF_POWER_SENSOR,
     CONF_POWER_TEMPLATE,
-    CONF_POWER_SENSOR_DELAY,
+    CONF_POWER_DELAY,
     CONF_POWER_RESTORE_STATE,
     CONF_AVAILABILITY_SENSOR,
     CONF_AVAILABILITY_TEMPLATE,
@@ -61,9 +61,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_DELAY, default=DEFAULT_DELAY): cv.string,
         vol.Optional(CONF_POWER_SENSOR): cv.entity_id,
         vol.Optional(CONF_POWER_TEMPLATE): cv.template,
-        vol.Optional(
-            CONF_POWER_SENSOR_DELAY, default=DEFAULT_POWER_SENSOR_DELAY
-        ): cv.positive_int,
+        vol.Optional(CONF_POWER_DELAY, default=DEFAULT_POWER_DELAY): cv.positive_int,
         vol.Optional(CONF_POWER_RESTORE_STATE, default=True): cv.boolean,
         vol.Optional(CONF_AVAILABILITY_SENSOR): cv.entity_id,
         vol.Optional(CONF_AVAILABILITY_TEMPLATE): cv.template,
@@ -103,8 +101,8 @@ class SmartIRLight(SmartIR, LightEntity, TemplateEntity, RestoreEntity):
         self._delay = config.get(CONF_DELAY)
         self._power_sensor = config.get(CONF_POWER_SENSOR)
         self._power_template = config.get(CONF_POWER_TEMPLATE)
-        self._power_sensor_delay = config.get(CONF_POWER_SENSOR_DELAY)
-        self._power_sensor_restore_state = config.get(CONF_POWER_RESTORE_STATE)
+        self._power_delay = config.get(CONF_POWER_DELAY)
+        self._power_restore_state = config.get(CONF_POWER_RESTORE_STATE)
         self._availability_sensor = config.get(CONF_AVAILABILITY_SENSOR)
         self._availability_template = config.get(CONF_AVAILABILITY_TEMPLATE)
         self._availability_when_on = config.get(CONF_AVAILABILITY_WHEN_ON)
@@ -113,8 +111,8 @@ class SmartIRLight(SmartIR, LightEntity, TemplateEntity, RestoreEntity):
         self._brightness = None
         self._colortemp = None
         self._on_by_remote = False
-        self._power_sensor_check_expect = None
-        self._power_sensor_check_cancel = None
+        self._power_check_expect = None
+        self._power_check_cancel = None
 
         self._manufacturer = device_data["manufacturer"]
         self._supported_models = device_data["supportedModels"]

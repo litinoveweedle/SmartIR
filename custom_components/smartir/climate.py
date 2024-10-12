@@ -35,14 +35,14 @@ from . import (
     SmartIR,
     DeviceData,
     DEFAULT_DELAY,
-    DEFAULT_POWER_SENSOR_DELAY,
+    DEFAULT_POWER_DELAY,
     CONF_UNIQUE_ID,
     CONF_DEVICE_CODE,
     CONF_CONTROLLER_DATA,
     CONF_DELAY,
     CONF_POWER_SENSOR,
     CONF_POWER_TEMPLATE,
-    CONF_POWER_SENSOR_DELAY,
+    CONF_POWER_DELAY,
     CONF_POWER_RESTORE_STATE,
     CONF_AVAILABILITY_SENSOR,
     CONF_AVAILABILITY_TEMPLATE,
@@ -68,9 +68,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_HUMIDITY_SENSOR): cv.entity_id,
         vol.Optional(CONF_POWER_SENSOR): cv.entity_id,
         vol.Optional(CONF_POWER_TEMPLATE): cv.template,
-        vol.Optional(
-            CONF_POWER_SENSOR_DELAY, default=DEFAULT_POWER_SENSOR_DELAY
-        ): cv.positive_int,
+        vol.Optional(CONF_POWER_DELAY, default=DEFAULT_POWER_DELAY): cv.positive_int,
         vol.Optional(CONF_POWER_RESTORE_STATE, default=True): cv.boolean,
         vol.Optional(CONF_AVAILABILITY_SENSOR): cv.entity_id,
         vol.Optional(CONF_AVAILABILITY_TEMPLATE): cv.template,
@@ -121,8 +119,8 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
         self._humidity_sensor = config.get(CONF_HUMIDITY_SENSOR)
         self._power_sensor = config.get(CONF_POWER_SENSOR)
         self._power_template = config.get(CONF_POWER_TEMPLATE)
-        self._power_sensor_delay = config.get(CONF_POWER_SENSOR_DELAY)
-        self._power_sensor_restore_state = config.get(CONF_POWER_RESTORE_STATE)
+        self._power_delay = config.get(CONF_POWER_DELAY)
+        self._power_restore_state = config.get(CONF_POWER_RESTORE_STATE)
         self._availability_sensor = config.get(CONF_AVAILABILITY_SENSOR)
         self._availability_template = config.get(CONF_AVAILABILITY_TEMPLATE)
         self._availability_when_on = config.get(CONF_AVAILABILITY_WHEN_ON)
@@ -138,8 +136,8 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
             | ClimateEntityFeature.TURN_ON
             | ClimateEntityFeature.TURN_OFF
         )
-        self._power_sensor_check_expect = None
-        self._power_sensor_check_cancel = None
+        self._power_check_expect = None
+        self._power_check_cancel = None
 
         self._manufacturer = device_data["manufacturer"]
         self._supported_models = device_data["supportedModels"]
@@ -347,7 +345,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
             self._availability_when_on or self._state == STATE_OFF
         ):
             return STATE_UNAVAILABLE
-        elif self._on_by_remote and not self._power_sensor_restore_state:
+        elif self._on_by_remote and not self._power_restore_state:
             return self._state
         elif self._state == STATE_OFF:
             return HVACMode.OFF
@@ -377,7 +375,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        if self._on_by_remote and not self._power_sensor_restore_state:
+        if self._on_by_remote and not self._power_restore_state:
             return None
         else:
             return self._target_temperature
@@ -395,7 +393,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
     @property
     def hvac_mode(self):
         """Return hvac mode ie. heat, cool."""
-        if self._on_by_remote and not self._power_sensor_restore_state:
+        if self._on_by_remote and not self._power_restore_state:
             return None
         else:
             return self._hvac_mode
@@ -408,7 +406,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
     @property
     def preset_mode(self):
         """Return the preset mode."""
-        if self._on_by_remote and not self._power_sensor_restore_state:
+        if self._on_by_remote and not self._power_restore_state:
             return None
         else:
             return self._preset_mode
@@ -421,7 +419,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
     @property
     def fan_mode(self):
         """Return the fan setting."""
-        if self._on_by_remote and not self._power_sensor_restore_state:
+        if self._on_by_remote and not self._power_restore_state:
             return None
         else:
             return self._fan_mode
@@ -434,7 +432,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
     @property
     def swing_mode(self):
         """Return the current swing mode."""
-        if self._on_by_remote and not self._power_sensor_restore_state:
+        if self._on_by_remote and not self._power_restore_state:
             return None
         else:
             return self._swing_mode
@@ -457,7 +455,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
     @property
     def hvac_action(self) -> HVACAction | None:
         """Return the current running hvac operation if supported."""
-        if self._on_by_remote and not self._power_sensor_restore_state:
+        if self._on_by_remote and not self._power_restore_state:
             return None
         else:
             return self._hvac_action
@@ -613,7 +611,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, TemplateEntity, RestoreEntity):
     ):
         async with self._temp_lock:
             if (self._power_sensor or self._power_template) and self._state != state:
-                self._async_power_sensor_check_schedule(state)
+                self._async_power_check_schedule(state)
 
             try:
                 if state == STATE_OFF:

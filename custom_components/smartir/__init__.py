@@ -19,7 +19,7 @@ from .controller_const import CONTROLLER_SUPPORT
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_DELAY = 0.5
-DEFAULT_POWER_SENSOR_DELAY = 10
+DEFAULT_POWER_DELAY = 10
 
 CONF_UNIQUE_ID = "unique_id"
 CONF_DEVICE_CODE = "device_code"
@@ -27,7 +27,7 @@ CONF_CONTROLLER_DATA = "controller_data"
 CONF_DELAY = "delay"
 CONF_POWER_SENSOR = "power_sensor"
 CONF_POWER_TEMPLATE = "power_template"
-CONF_POWER_SENSOR_DELAY = "power_sensor_delay"
+CONF_POWER_DELAY = "power_delay"
 CONF_POWER_RESTORE_STATE = "power_restore_state"
 CONF_AVAILABILITY_SENSOR = "availability_sensor"
 CONF_AVAILABILITY_TEMPLATE = "availability_template"
@@ -650,17 +650,17 @@ class SmartIR:
             self.async_write_ha_state()
 
     @callback
-    def _async_power_sensor_check_schedule(self, state):
-        if self._power_sensor_check_cancel:
-            self._power_sensor_check_cancel()
-            self._power_sensor_check_cancel = None
-            self._power_sensor_check_expect = None
+    def _async_power_check_schedule(self, state):
+        if self._power_check_cancel:
+            self._power_check_cancel()
+            self._power_check_cancel = None
+            self._power_check_expect = None
 
         @callback
-        def _async_power_sensor_check(*_):
-            self._power_sensor_check_cancel = None
-            expected_state = self._power_sensor_check_expect
-            self._power_sensor_check_expect = None
+        def _async_power_check(*_):
+            self._power_check_cancel = None
+            expected_state = self._power_check_expect
+            self._power_check_expect = None
             current_state = getattr(
                 self.hass.states.get(self._power_sensor), "state", None
             )
@@ -682,8 +682,8 @@ class SmartIR:
                 )
                 self.async_write_ha_state()
 
-        self._power_sensor_check_expect = state
-        self._power_sensor_check_cancel = async_call_later(
-            self.hass, self._power_sensor_delay, _async_power_sensor_check
+        self._power_check_expect = state
+        self._power_check_cancel = async_call_later(
+            self.hass, self._power_delay, _async_power_check
         )
         _LOGGER.debug("Scheduled power sensor check for '%s' state", state)
