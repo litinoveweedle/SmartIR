@@ -595,10 +595,12 @@ class SmartIR:
             return
 
         if new_state.state == STATE_ON and self._state != STATE_ON:
+            _LOGGER.debug("Power sensor changed state to '%s'.", STATE_ON)
             self._state = STATE_ON
             self._on_by_remote = True
             await self._async_update_hvac_action()
         elif new_state.state == STATE_OFF:
+            _LOGGER.debug("Power sensor changed state to '%s'.", STATE_OFF)
             self._on_by_remote = False
             if self._state != STATE_OFF:
                 self._state = STATE_OFF
@@ -606,7 +608,7 @@ class SmartIR:
         self.async_write_ha_state()
 
     @staticmethod
-    async def _async_power_template_changed(self, result: bool):
+    async def _async_power_template_changed(self, result: str | TemplateError) -> None:
         """Handle availability template changes."""
         if isinstance(result, TemplateError):
             return
@@ -614,9 +616,11 @@ class SmartIR:
         result = result_as_boolean(result)
         if result != self._availability:
             if result:
+                _LOGGER.debug("Power template changed state to '%s'.", STATE_ON)
                 self._state = STATE_ON
                 self._on_by_remote = True
             else:
+                _LOGGER.debug("Power template changed state to '%s'.", STATE_OFF)
                 self._state = STATE_OFF
                 self._on_by_remote = False
             self.async_write_ha_state()
@@ -636,16 +640,21 @@ class SmartIR:
 
         result = result_as_boolean(result)
         if result != self._availability:
+            _LOGGER.debug("Availability sensor changed state to '%s'.", result)
             self._availability = result
             self.async_write_ha_state()
 
     @staticmethod
-    async def _async_availability_template_changed(self, result: str | TemplateError):
+    async def _async_availability_template_changed(
+        self, result: str | TemplateError
+    ) -> None:
         """Handle availability template changes."""
         if isinstance(result, TemplateError):
             return
+
         result = result_as_boolean(result)
         if result != self._availability:
+            _LOGGER.debug("Availability template changed state to '%s'.", result)
             self._availability = result
             self.async_write_ha_state()
 
