@@ -163,7 +163,7 @@ climate:
     device_code: 8000
     controller_data:
       controller_type: ESPHome
-      esphome_service: my_espir_send_raw_command
+      esphome_service: my_espir_send_multi_command
     temperature_sensor: sensor.temperature
     humidity_sensor: sensor.humidity
     power_sensor: binary_sensor.ac_power
