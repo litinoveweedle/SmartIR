@@ -100,25 +100,28 @@ light:
 
 ESPHome configuration example:
 
+
 ```yaml
 esphome:
   name: my_espir
   platform: ESP8266
   board: esp01_1m
 
+includes:
+    - cmdtoraw.h
 api:
   services:
-    - service: send_raw_command
+    - service: send_multi_command
       variables:
-        command: int[]
+        command: string
       then:
         - remote_transmitter.transmit_raw:
-            code: !lambda "return command;"
+            code: !lambda return cmdtoraw(command); 
+            carrier_frequency: 38000hz    
 
 remote_transmitter:
   pin: GPIO14
   carrier_duty_percent: 50%
-```
 
 HA configuration.yaml:
 
@@ -130,7 +133,7 @@ light:
     device_code: 4000
     controller_data:
       controller_type: ESPHome
-      esphome_service: my_espir_send_raw_command
+      esphome_service: my_espir_send_multi_command
     power_sensor: binary_sensor.bedroom_light_power
 ```
 
