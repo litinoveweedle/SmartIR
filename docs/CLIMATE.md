@@ -132,18 +132,20 @@ climate:
 ```
 
 ### Example (using ESPHome expanded functionality )
-### please include cmdtoraw.h in order to use the cmdtoraw() function
+### please include cmdtoraw.h to get the cmdtoraw() function
 ### the ESP device will accept both raw and ENC64 codes
+```yaml
 includes:
     - cmdtoraw.h
-services:
- - service: send_multi_command
-      variables:
-        command: string
-      then:
-        - remote_transmitter.transmit_raw:
-            code: !lambda return cmdtoraw(command); 
-            carrier_frequency: 38000hz    
+api:
+  services:
+   - service: send_multi_command
+        variables:
+          command: string
+        then:
+          - remote_transmitter.transmit_raw:
+              code: !lambda return cmdtoraw(command); 
+              carrier_frequency: 38000hz    
 
 
 remote_transmitter:
