@@ -122,7 +122,7 @@ api:
 remote_transmitter:
   pin: GPIO14
   carrier_duty_percent: 50%
-
+```
 HA configuration.yaml:
 
 ```yaml
