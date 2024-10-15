@@ -132,8 +132,9 @@ climate:
 ```
 
 ### Example (using ESPHome expanded functionality )
-### please include cmdtoraw.h to get the cmdtoraw() function
-### the ESP device will accept both raw and ENC64 codes
+please include cmdtoraw.h to get the cmdtoraw() function
+the ESP device will then accept both raw and ENC64 codes
+
 ```yaml
 includes:
     - cmdtoraw.h
