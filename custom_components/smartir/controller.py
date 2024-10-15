@@ -275,7 +275,7 @@ class ESPHomeController(AbstractController):
 
     async def send(self, command):
         """Send a command."""
-        service_data = {"command": json.loads(command)}
+        service_data = {"command": command}
 
         await self.hass.services.async_call(
             "esphome",

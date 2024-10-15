@@ -131,24 +131,23 @@ climate:
     power_sensor: binary_sensor.ac_power
 ```
 
-### Example (using ESPHome)
-
-ESPHome configuration example:
+### Example (using ESPHome expanded functionality )
+please include cmdtoraw.h to get the cmdtoraw() function
+the ESP device will then accept both raw and ENC64 codes
 
 ```yaml
-esphome:
-  name: my_espir
-  platform: ESP8266
-  board: esp01_1m
-
+includes:
+    - cmdtoraw.h
 api:
   services:
-    - service: send_raw_command
-      variables:
-        command: int[]
-      then:
-        - remote_transmitter.transmit_raw:
-            code: !lambda "return command;"
+   - service: send_multi_command
+        variables:
+          command: string
+        then:
+          - remote_transmitter.transmit_raw:
+              code: !lambda return cmdtoraw(command); 
+              carrier_frequency: 38000hz    
+
 
 remote_transmitter:
   pin: GPIO14
@@ -165,7 +164,7 @@ climate:
     device_code: 8000
     controller_data:
       controller_type: ESPHome
-      esphome_service: my_espir_send_raw_command
+      esphome_service: my_espir_send_multi_command
     temperature_sensor: sensor.temperature
     humidity_sensor: sensor.humidity
     power_sensor: binary_sensor.ac_power
