@@ -24,7 +24,7 @@ More than 120 climate devices are currently supported out-of-the-box, mainly for
 ## ESP Home upgrade
 By using the provided version of the yaml ESPHome example and the C++ inline lambda include function you will be able to use all the broadlink and raw codes with an ESPHome made device.
 Small modification are required to anable this functionality in the python code.
-Remember to chage the  "supportedController": "ESPHome" key in the code file you want to use and  copy it in the custom_codes folder (see below), in order to avoid overwitings.
+Remember to change the  "supportedController": "ESPHome" key inside the code file you want to use and  copy it in the custom_codes folder (see below), in order to avoid overwitings.
 Enjoy!
 
 Don't forget to **star** the repository if you had fun!
