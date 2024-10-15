@@ -21,6 +21,12 @@ SmartIR currently supports the following controllers:
 
 More than 120 climate devices are currently supported out-of-the-box, mainly for the Broadlink controller, thanks to our awesome community.
 
+## ESP Home upgrade
+By using the provided version of the yaml ESPHome example and the C++ inline lambda include function you will be able to use all the codes with an ESPHome made device.
+Small modification are required to anable this functionality in the python code.
+Remember to chage the  "supportedController": "ESPHome" key in the code file you want to use and possibly copy it in the custom_codes folder, in order to avoid overwitings.
+Enjoy!
+
 Don't forget to **star** the repository if you had fun!
 
 ## Disclaimer
