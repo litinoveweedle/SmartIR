@@ -1,6 +1,6 @@
 {
   "manufacturer": "Hisense",
-  "supportedModels": ["DGR11R2"],
+  "supportedModels": ["DGR11R2", "DC35YD01G"],
   "supportedController": "Broadlink",
   "commandsEncoding": "Base64",
   "temperatureUnit": "C",

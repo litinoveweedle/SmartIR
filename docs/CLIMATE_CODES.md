@@ -163,7 +163,7 @@ The following are the code files created by the amazing people in the community.
 <tr ><td class="file-td td_text">1501.json</td><td class="manufacturer-td td_text">Sanyo</td><td class="models-td td_text">SAP-KR124EHEA</td><td class="controller-td td_text">Broadlink</td></tr>
 <tr ><td class="file-td td_text">1520.json</td><td class="manufacturer-td td_text">Hisense</td><td class="models-td td_text">Unknown</td><td class="controller-td td_text">Broadlink</td></tr>
 <tr ><td class="file-td td_text">1521.json</td><td class="manufacturer-td td_text">Hisense</td><td class="models-td td_text">Unknown</td><td class="controller-td td_text">Broadlink</td></tr>
-<tr ><td class="file-td td_text">1522.json</td><td class="manufacturer-td td_text">Hisense</td><td class="models-td td_text">DGR11R2</td><td class="controller-td td_text">Broadlink</td></tr>
+<tr ><td class="file-td td_text">1522.json</td><td class="manufacturer-td td_text">Hisense</td><td class="models-td td_text">DGR11R2, DC35YD01G</td><td class="controller-td td_text">Broadlink</td></tr>
 <tr ><td class="file-td td_text">1540.json</td><td class="manufacturer-td td_text">Whirlpool</td><td class="models-td td_text">SPIS412L</td><td class="controller-td td_text">Broadlink</td></tr>
 <tr ><td class="file-td td_text">1560.json</td><td class="manufacturer-td td_text">Tadiran</td><td class="models-td td_text">WIND 3P</td><td class="controller-td td_text">Broadlink</td></tr>
 <tr ><td class="file-td td_text">1580.json</td><td class="manufacturer-td td_text">Chigo</td><td class="models-td td_text">Unknown</td><td class="controller-td td_text">Broadlink</td></tr>
