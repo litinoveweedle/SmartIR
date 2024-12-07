@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Tuple
 import asyncio
 import logging
 
@@ -48,8 +49,21 @@ CONF_HUMIDITY_SENSOR = "humidity_sensor"
 CONF_POWER_SENSOR = "power_sensor"
 CONF_POWER_SENSOR_DELAY = "power_sensor_delay"
 CONF_POWER_SENSOR_RESTORE_STATE = "power_sensor_restore_state"
+CONF_TEMPERATURE_OFFSET = "temperature_offset"
 
 PRECISION_DOUBLE = 2
+
+DOMAIN = "smartir"
+_LOGGER = logging.getLogger(__name__)
+
+def temp_offset_validator(value):
+    """Validate the temperature offset values."""
+    if not isinstance(value, dict):
+        raise vol.Invalid("Temperature offset must be a dictionary")
+    try:
+        return {k: float(v) for k, v in value.items()}
+    except (TypeError, ValueError) as err:
+        raise vol.Invalid(f"Invalid temperature offset value: {err}")
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -65,15 +79,14 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
             CONF_POWER_SENSOR_DELAY, default=DEFAULT_POWER_SENSOR_DELAY
         ): cv.positive_int,
         vol.Optional(CONF_POWER_SENSOR_RESTORE_STATE, default=True): cv.boolean,
+        vol.Optional(CONF_TEMPERATURE_OFFSET, default={}): temp_offset_validator
     }
 )
-
 
 async def async_setup_platform(
     hass: HomeAssistant, config: ConfigType, async_add_entities, discovery_info=None
 ):
     """Set up the IR Climate platform."""
-    _LOGGER.debug("Setting up the SmartIR climate platform")
     if not (
         device_data := await DeviceData.load_file(
             config.get(CONF_DEVICE_CODE),
@@ -87,8 +100,23 @@ async def async_setup_platform(
         _LOGGER.error("SmartIR climate device data init failed!")
         return
 
-    async_add_entities([SmartIRClimate(hass, config, device_data)])
+    # Get operation modes and validate temperature offsets
+    operation_modes = device_data.get("operationModes", [])
+    temperature_offset = config.get(CONF_TEMPERATURE_OFFSET, {})
 
+    _LOGGER.debug("Temperature offsets configuration: %s", temperature_offset)
+
+    # Check if all configured modes are valid
+    for mode in temperature_offset:
+        if mode not in operation_modes:
+            _LOGGER.error(
+                "Invalid mode in temperature_offset configuration: %s. Valid modes are: %s",
+                mode,
+                operation_modes
+            )
+            return
+
+    async_add_entities([SmartIRClimate(hass, config, device_data)])
 
 class SmartIRClimate(ClimateEntity, RestoreEntity):
     _attr_should_poll = False
@@ -113,6 +141,21 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
         self._power_sensor_delay = config.get(CONF_POWER_SENSOR_DELAY)
         self._power_sensor_restore_state = config.get(CONF_POWER_SENSOR_RESTORE_STATE)
         self._temperature_unit = hass.config.units.temperature_unit
+        # Get the processed temperature offsets
+        self._temperature_offset = config.get(CONF_TEMPERATURE_OFFSET, {})
+        _LOGGER.debug("Initialized with temperature offsets: %s", self._temperature_offset)
+        
+        cleaned_offsets = {}
+        for mode, offset in self._temperature_offset.items():
+            try:
+                if isinstance(offset, str):
+                    offset = offset.replace('+', '')
+                cleaned_offsets[mode] = float(offset)
+                _LOGGER.debug("Stored temperature offset for mode %s: %s", mode, cleaned_offsets[mode])
+            except (ValueError, TypeError) as ex:
+                _LOGGER.error("Failed to process offset for mode %s: %s", mode, ex)
+        
+        self._temperature_offset = cleaned_offsets
 
         self._state = STATE_OFF
         self._hvac_mode = None
@@ -700,16 +743,43 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
                             return
 
                     if isinstance(commands, dict):
+                        offset = 0
+                        if hvac_mode in self._temperature_offset:
+                            offset = self._temperature_offset[hvac_mode]
+                            _LOGGER.debug(
+                                "Applying temperature offset of %s for mode %s (current temp: %s)",
+                                offset,
+                                hvac_mode,
+                                temperature
+                            )
+
+                        # Store original temperature for later use
+                        original_temperature = temperature
+
+                        # Apply offset to the temperature with limits
+                        if temperature != "-":
+                            adjusted_temperature = temperature + offset
+                            # Ensure adjusted temperature stays within limits
+                            adjusted_temperature = max(self._min_temperature, min(self._max_temperature, adjusted_temperature))
+                            _LOGGER.debug(
+                                "Temperature adjusted from %s to %s (after offset and limits)",
+                                temperature,
+                                adjusted_temperature
+                            )
+                        else:
+                            adjusted_temperature = "-"
+                        
                         target_temperature = convert_temp(
-                            temperature,
+                            adjusted_temperature,
                             self._ha_temperature_unit,
                             self._data_temperature_unit,
                             None,
                         )
                         _LOGGER.debug(
-                            "Input HA temperature '%s%s' converted into device temperature '%s%s'.",
+                            "Input HA temperature '%s%s' (with offset %s) converted into device temperature '%s%s'.",
                             temperature,
                             self._ha_temperature_unit,
+                            offset,
                             target_temperature,
                             self._data_temperature_unit,
                         )
@@ -745,7 +815,8 @@ class SmartIRClimate(ClimateEntity, RestoreEntity):
                                 temp_ha,
                                 self._ha_temperature_unit,
                             )
-                            temperature = temp_ha
+                            # Use the original temperature for the UI/state
+                            temperature = original_temperature
                             commands = commands[str(temp[0])]
                         else:
                             _LOGGER.error(
