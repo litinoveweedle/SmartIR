@@ -192,6 +192,106 @@ These are command to set controlled device into desired work state. Due to the n
                   },
   ```
 
+## Light Speficic
+
+### Light declaration part
+
+```yaml:
+    "brightness": [26, 51, 77, 102, 128, 153, 179, 204, 230, 255],
+    "colorTemperature": [
+      2700, 4600, 6500
+    ],
+```
+
+| json attribute    | mandatory |        type        | description                                                                                                                                                                                                                                                                                                                |
+| ----------------- | :-------: | :----------------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `brightness` |   `no`   |      `array of int`      | List of supported brightness levels for the light in the range of 0 to 255.                       |
+| `colorTemperature`  |   `yes`   |    `array of int`    | List of supported color temperatures for the light in Kelvin (K).                             |
+
+### Light commands
+
+#### Light `off` commands
+
+The off command specifies the IR code used to turn off the light. This command is necessary for any basic light control setup.
+
+```yaml:
+    "commands": {
+        "off": "JgCSAAABKHQKDGgHtSq.............",
+```
+
+#### Light `on` commands
+
+The on command is used to power on the device. In some cases, a dedicated on command is not required if the device can be turned on by setting a brightness or color temperature value.
+Since the device state is only assumed without a power sensor, it is highly recommended to use the power sensor feature in this case.
+
+```yaml:
+    "commands": {
+        "on": "JgCSAAABKHQKDGgHtSq.............",
+```
+
+#### Light `night` commands
+
+If a night command is specified, there is a special case when the requested brightness is 1, using the defined command:
+
+  ```yaml:
+  "commands": {
+      "night": "JgCSAAABKZIXEBcRFz.............",
+  ```
+
+#### Light brightness control
+
+The brightness control functionality enables dynamic adjustments to the light’s intensity. This can be achieved through general brighten and dim commands or by specifying individual commands for each supported brightness level.
+
+##### Light brighten and dim commands
+
+The brighten and dim commands incrementally adjust the brightness up or down, respectively.
+
+  ```yaml:
+  "commands": {
+      "brighten": "JgCSAAABKZIXEBcRFz.............",
+      "dim": "JgCSAAABKZIXEBcRFz.............",
+  ```
+
+##### Light brightness commands
+
+Alternatively, each supported brightness level can have a dedicated command.
+
+  ```yaml:
+  "commands": {
+      "brightness": {
+        "26": "JgCSAAABKZIXEBcRFz.............",
+        "51": "JgCSAAABKZIXEBcRFz.............",
+        ...
+      }
+  ```
+
+#### Light color temperature control
+
+Color temperature control allows users to adjust the warmth or coolness of the light. Similar to brightness, this can be managed with general commands or specific values.
+
+##### Light colder and warmer commands
+
+The colder and warmer commands provide a general way to adjust the color temperature incrementally.
+
+  ```yaml:
+  "commands": {
+      "colder": "JgCSAAABKZIXEBcRFz.............",
+      "warmer": "JgCSAAABKZIXEBcRFz.............",
+  ```
+
+##### Light colorTemperature commands
+
+Alternatively, commands can be defined for each supported color temperature value.
+
+  ```yaml:
+  "commands": {
+      "colorTemperature": {
+        "2700": "JgCSAAABKZIXEBcRFz.............",
+        "4600": "JgCSAAABKZIXEBcRFz.............",
+        "6500": "JgCSAAABKZIXEBcRFz.............",
+      }
+  ```
+
 ## Fan Speficic
 
 TBD
