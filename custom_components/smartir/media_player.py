@@ -1,6 +1,6 @@
 import asyncio
 import logging
-
+import time
 import voluptuous as vol
 
 from homeassistant.components.media_player import MediaPlayerEntity, PLATFORM_SCHEMA
@@ -94,6 +94,7 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
         self._support_flags = 0
         self._power_sensor_check_expect = None
         self._power_sensor_check_cancel = None
+        self._ready_at = None
 
         self._manufacturer = device_data["manufacturer"]
         self._supported_models = device_data["supportedModels"]
@@ -157,6 +158,10 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
             # Sources list
             for key in self._commands["sources"]:
                 self._sources_list.append(key)
+
+        # Initialization times
+        self._warm_up_delay = device_data['warmUpDelay'] if 'warmUpDelay' in device_data else None
+        self._cool_down_delay = device_data['coolDownDelay'] if 'coolDownDelay' in device_data else None
 
         # Init exclusive lock for sending IR commands
         self._temp_lock = asyncio.Lock()
@@ -254,7 +259,7 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
         await self._send_command(STATE_OFF, [])
 
     async def async_turn_on(self):
-        """Turn the media player off."""
+        """Turn the media player on."""
         await self._send_command(STATE_ON, [])
 
     async def async_media_previous_track(self):
@@ -300,6 +305,8 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
     async def _send_command(self, state, commands):
         async with self._temp_lock:
 
+            await self.wait_until_ready()
+
             if self._power_sensor and self._state != state:
                 self._async_power_sensor_check_schedule(state)
 
@@ -310,12 +317,17 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
                             _LOGGER.error("Missing device IR code for 'on' command.")
                         else:
                             await self._controller.send(self._commands["on"])
+                            self._ready_at = time.monotonic() + max(self._warm_up_delay or 0, float(self._delay))
+
                     elif state == STATE_OFF:
                         if "off" not in self._commands.keys():
                             _LOGGER.error("Missing device IR code for 'off' command.")
                         else:
                             await self._controller.send(self._commands["off"])
-                    await asyncio.sleep(self._delay)
+                            self._ready_at = time.monotonic() + max(self._cool_down_delay or 0, float(self._delay))
+
+                    if commands:
+                        await self.wait_until_ready()
 
                 for keys in commands:
                     data = self._commands
@@ -372,6 +384,13 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
                 self._state = STATE_OFF
                 # self._source = None
         self.async_write_ha_state()
+
+    async def wait_until_ready(self):
+        if self._ready_at:
+            time_to_wait = self._ready_at - time.monotonic()
+            if time_to_wait > 0:
+                await asyncio.sleep(time_to_wait)
+            self._ready_at = None
 
     @callback
     def _async_power_sensor_check_schedule(self, state):
