@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-import voluptuous as vol
+import voluptuous as vol  # type: ignore
 
 from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.components.media_player.const import (
@@ -169,36 +169,36 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
 
     async def async_turn_off(self):
         """Turn the media player off."""
-        await self._send_command(STATE_OFF, [])
+        await self.send_command(STATE_OFF, [])
 
     async def async_turn_on(self):
         """Turn the media player off."""
-        await self._send_command(STATE_ON, [])
+        await self.send_command(STATE_ON, [])
 
     async def async_media_previous_track(self):
         """Send previous track command."""
-        await self._send_command(self._state, [["previousChannel"]])
+        await self.send_command(self._state, [["previousChannel"]])
 
     async def async_media_next_track(self):
         """Send next track command."""
-        await self._send_command(self._state, [["nextChannel"]])
+        await self.send_command(self._state, [["nextChannel"]])
 
     async def async_volume_down(self):
         """Turn volume down for media player."""
-        await self._send_command(self._state, [["volumeDown"]])
+        await self.send_command(self._state, [["volumeDown"]])
 
     async def async_volume_up(self):
         """Turn volume up for media player."""
-        await self._send_command(self._state, [["volumeUp"]])
+        await self.send_command(self._state, [["volumeUp"]])
 
     async def async_mute_volume(self, mute):
         """Mute the volume."""
-        await self._send_command(self._state, [["mute"]])
+        await self.send_command(self._state, [["mute"]])
 
     async def async_select_source(self, source):
         """Select channel from source."""
         self._source = source
-        await self._send_command(self._state, [["sources", source]])
+        await self.send_command(self._state, [["sources", source]])
 
     async def async_play_media(self, media_type, media_id, **kwargs):
         """Support channel change through play_media service."""
@@ -213,9 +213,9 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
         commands = []
         for digit in media_id:
             commands.append(["sources", "Channel {}".format(digit)])
-        await self._send_command(STATE_ON, commands)
+        await self.send_command(STATE_ON, commands)
 
-    async def _send_command(self, state, commands):
+    async def send_command(self, state, commands):
         async with self._temp_lock:
 
             if self._power_sensor and self._state != state:
@@ -300,6 +300,4 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
                 self.async_write_ha_state()
 
             except Exception as e:
-                _LOGGER.exception(
-                    "Exception raised in the in the _send_command '%s'", e
-                )
+                _LOGGER.exception("Exception raised in the in the send_command '%s'", e)

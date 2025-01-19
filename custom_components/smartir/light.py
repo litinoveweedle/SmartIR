@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-import voluptuous as vol
+import voluptuous as vol  # type: ignore
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -45,7 +45,7 @@ async def async_setup_platform(
     async_add_entities([SmartIRLight(hass, config, device_data)])
 
 
-class SmartIRLight(LightEntity, RestoreEntity):
+class SmartIRLight(SmartIR, LightEntity, RestoreEntity):
 
     def __init__(self, hass: HomeAssistant, config: ConfigType, device_data):
         # Initialize SmartIR device
@@ -76,9 +76,18 @@ class SmartIRLight(LightEntity, RestoreEntity):
 
         last_state = await self.async_get_last_state()
         if last_state is not None:
-            if ATTR_BRIGHTNESS in last_state.attributes:
+            if (
+                ATTR_BRIGHTNESS in last_state.attributes
+                and self._brightness_list is not None
+                and last_state.attributes[ATTR_BRIGHTNESS] in self._brightness_list
+            ):
                 self._brightness = last_state.attributes[ATTR_BRIGHTNESS]
-            if ATTR_COLOR_TEMP_KELVIN in last_state.attributes:
+            if (
+                ATTR_COLOR_TEMP_KELVIN in last_state.attributes
+                and self._color_temp_list is not None
+                and last_state.attributes[ATTR_COLOR_TEMP_KELVIN]
+                in self._color_temp_list
+            ):
                 self._color_temp = last_state.attributes[ATTR_COLOR_TEMP_KELVIN]
 
     @property
@@ -128,8 +137,8 @@ class SmartIRLight(LightEntity, RestoreEntity):
         }
 
     async def async_turn_on(self, **kwargs):
-        brightness = kwargs.get(ATTR_BRIGHTNESS)
-        color_temp = kwargs.get(ATTR_COLOR_TEMP_KELVIN)
+        brightness = kwargs.get(ATTR_BRIGHTNESS, self._brightness)
+        color_temp = kwargs.get(ATTR_COLOR_TEMP_KELVIN, self._color_temp)
 
         if self._brightness_list is not None and brightness is None:
             _LOGGER.debug(
@@ -145,10 +154,10 @@ class SmartIRLight(LightEntity, RestoreEntity):
             )
             color_temp = self._color_temp
 
-        await self._send_command(STATE_ON, brightness, color_temp)
+        await self.send_command(STATE_ON, brightness, color_temp)
 
     async def async_turn_off(self):
-        await self._send_command(STATE_OFF)
+        await self.send_command(STATE_OFF, self._brightness, self._color_temp)
 
     async def async_toggle(self):
         await (self.async_turn_on() if not self.is_on else self.async_turn_off())
@@ -310,6 +319,4 @@ class SmartIRLight(LightEntity, RestoreEntity):
                 self.async_write_ha_state()
 
             except Exception as e:
-                _LOGGER.exception(
-                    "Exception raised in the in the _send_command '%s'", e
-                )
+                _LOGGER.exception("Exception raised in the in the send_command '%s'", e)

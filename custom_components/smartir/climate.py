@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-import voluptuous as vol
+import voluptuous as vol  # type: ignore
 from numbers import Number
 
 from homeassistant.components.climate import ClimateEntity
@@ -704,7 +704,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, RestoreEntity):
 
             except Exception as e:
                 _LOGGER.exception(
-                    "Exception raised in the in the _send_command '%s'", e
+                    "Exception raised in the in the send_command '%s'", e
                 )
 
     async def _async_temp_sensor_changed(
