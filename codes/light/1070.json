@@ -6,7 +6,6 @@
   "brightness": [
     16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 255
   ],
-  "colorTemperature": [],
   "commands": {
     "on": "BZgjrRE/AuAXAQGDBuAFA0AB4AcTQA/gFwFAI+ALAwcQoZgj0Qg/Ag==",
     "off": "B34jkRFpAhQC4BUDAWcG4AUDQC/gAxMAFCABQA8BFAJAA0ABQAfgAQMFZwYUAhQCQAfgDQMHOKF+I6MIaQI=",

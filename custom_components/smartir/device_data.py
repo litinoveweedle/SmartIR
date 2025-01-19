@@ -462,4 +462,155 @@ class DeviceData:
 
     @staticmethod
     def check_file_light(file_name, device_data, device_class, check_data):
+        color_modes = {}
+
+        if not (
+            "commands" in device_data
+            and isinstance(device_data["commands"], dict)
+            and len(device_data["commands"])
+        ):
+            _LOGGER.error(
+                "Invalid %s device JSON file '%s': missing or invalid attribute 'commands'.",
+                device_class,
+                file_name,
+            )
+            return False
+        commands = device_data["commands"]
+
+        if "brightness" in device_data:
+            if not (
+                isinstance(device_data["brightness"], list)
+                and len(device_data["brightness"])
+                and sorted(device_data["brightness"]) == device_data["brightness"]
+            ):
+                _LOGGER.error(
+                    "Invalid %s device JSON file '%s': invalid parameter 'brightness'",
+                    device_class,
+                    file_name,
+                )
+                return False
+            color_modes["brightness"] = True
+        else:
+            for cmd in ["brightness", "dim", "brighten"]:
+                if cmd in commands:
+                    _LOGGER.error(
+                        "Invalid %s device JSON file '%s': invalid command '%s'",
+                        device_class,
+                        file_name,
+                        cmd,
+                    )
+                    return False    
+
+        if "colorTemperature" in device_data:
+            if not (
+                isinstance(device_data["colorTemperature"], list)
+                and len(device_data["colorTemperature"])
+                and sorted(device_data["colorTemperature"])
+                == device_data["colorTemperature"]
+            ):
+                _LOGGER.error(
+                    "Invalid %s device JSON file '%s': invalid parameter 'colorTemperature'",
+                    device_class,
+                    file_name,
+                )
+                return False
+            color_modes["color_temp"] = True
+        else:
+            for cmd in ["colorTemperature", "colder", "warmer"]:
+                if cmd in commands:
+                    _LOGGER.error(
+                        "Invalid %s device JSON file '%s': invalid command '%s'",
+                        device_class,
+                        file_name,
+                        cmd,
+                    )
+                    return False
+
+        if "brightness" in color_modes:
+            if "brightness" in commands:
+                if not (
+                    isinstance(commands["brightness"], list)
+                    and len(commands["brightness"])
+                ):
+                    _LOGGER.error(
+                        "Invalid %s device JSON file '%s': invalid commands 'brightness'",
+                        device_class,
+                        file_name,
+                    )
+                    return False
+
+                # check if same IR command were find in the device data
+                if not (
+                    len(device_data["brightness"]) == len(commands["brightness"])
+                    and all(
+                        key in commands["brightness"]
+                        for key in device_data["brightness"]
+                    )
+                ):
+                    _LOGGER.info(
+                        "Invalid %s device JSON file '%s': parameter 'brightness' and commands 'brightness' contain different keys.",
+                        device_class,
+                        file_name,
+                    )
+                    return False
+            elif not (
+                "dim" in commands
+                and isinstance(commands["dim"], str)
+                and "brighten" in commands
+                and isinstance(commands["brighten"], str)
+            ):
+                _LOGGER.info(
+                    "Invalid %s device JSON file '%s': parameter 'brightness' require either command 'brightness' or 'dim' and 'brighten' commands to be defined.",
+                    device_class,
+                    file_name,
+                )
+                return False
+
+        elif len(color_modes) > 1:
+            _LOGGER.error(
+                "Invalid %s device JSON file '%s': Any color mode require parameter 'brightness' to be defined as well",
+                device_class,
+                file_name,
+            )
+            return False
+
+        if "color_temp" in color_modes:
+            if "colorTemperature" in commands:
+                if not (
+                    isinstance(commands["colorTemperature"], list)
+                    and len(commands["colorTemperature"])
+                ):
+                    _LOGGER.error(
+                        "Invalid %s device JSON file '%s': invalid commands 'colorTemperature'",
+                        device_class,
+                        file_name,
+                    )
+                    return False
+
+                # check if same IR command were find in the device data
+                if len(device_data["colorTemperature"]) == len(
+                    commands["colorTemperature"]
+                ) and all(
+                    key in commands["colorTemperature"]
+                    for key in device_data["colorTemperature"]
+                ):
+                    _LOGGER.info(
+                        "Invalid %s device JSON file '%s': parameter 'colorTemperature' and commands 'colorTemperature' contain different keys.",
+                        device_class,
+                        file_name,
+                    )
+                    return False
+            elif not (
+                "colder" in commands
+                and isinstance(commands["colder"], str)
+                and "warmer" in commands
+                and isinstance(commands["warmer"], str)
+            ):
+                _LOGGER.info(
+                    "Invalid %s device JSON file '%s': parameter 'colorTemperature' require either command 'colorTemperature' or 'warmer' and 'colder' to be defined.",
+                    device_class,
+                    file_name,
+                )
+                return False
+
         return True
