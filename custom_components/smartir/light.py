@@ -55,7 +55,7 @@ class SmartIRLight(SmartIR, LightEntity, RestoreEntity):
         self._color_temp = None
 
         self._brightness_list = device_data.get("brightness")
-        self._color_temp_list = device_data.get("colorTemperatures")
+        self._color_temp_list = device_data.get("colorTemperature")
 
         if self._color_temp_list is not None:
             # The light can be dimmed and its color temperature is present in the state.
@@ -208,7 +208,7 @@ class SmartIRLight(SmartIR, LightEntity, RestoreEntity):
                                 "on",
                             )
                         else:
-                            # if on code is not present, the on bit can be still set later in the all operation/fan codes"""
+                            # if on code is not present, the on bit can be still set later in the all operation codes
                             _LOGGER.debug("Found 'on' operation mode command.")
                             await self._controller.send(self._commands["on"])
                             await asyncio.sleep(self._delay)
