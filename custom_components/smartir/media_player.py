@@ -51,7 +51,7 @@ async def async_setup_platform(
     async_add_entities([SmartIRMediaPlayer(hass, config, device_data)])
 
 
-class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
+class SmartIRMediaPlayer(SmartIR, MediaPlayerEntity, RestoreEntity):
 
     def __init__(self, hass: HomeAssistant, config: ConfigType, device_data):
         # Initialize SmartIR device

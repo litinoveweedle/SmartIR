@@ -52,7 +52,7 @@ async def async_setup_platform(
     async_add_entities([SmartIRFan(hass, config, device_data)])
 
 
-class SmartIRFan(FanEntity, RestoreEntity):
+class SmartIRFan(SmartIR, FanEntity, RestoreEntity):
     _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, hass: HomeAssistant, config: ConfigType, device_data):
