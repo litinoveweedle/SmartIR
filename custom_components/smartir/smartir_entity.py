@@ -2,14 +2,10 @@ import asyncio
 import logging
 import os.path
 
-import voluptuous as vol
+import voluptuous as vol  # type: ignore
 from homeassistant.core import HomeAssistant, Event, EventStateChangedData, callback
 from homeassistant.components.climate import PLATFORM_SCHEMA
-from homeassistant.const import (
-    CONF_NAME,
-    STATE_ON,
-    STATE_OFF
-)
+from homeassistant.const import CONF_NAME, STATE_ON, STATE_OFF
 from homeassistant.helpers.event import async_track_state_change_event, async_call_later
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
@@ -20,12 +16,14 @@ from .controller import get_controller, get_controller_schema
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_DELAY = 0.5
+DEFAULT_OPTIMISTIC_STATE = True
 DEFAULT_POWER_SENSOR_DELAY = 10
 
 CONF_UNIQUE_ID = "unique_id"
 CONF_DEVICE_CODE = "device_code"
 CONF_CONTROLLER_DATA = "controller_data"
 CONF_DELAY = "delay"
+CONF_OPTIMISTIC_STATE = "optimistic"
 CONF_POWER_SENSOR = "power_sensor"
 CONF_POWER_SENSOR_DELAY = "power_sensor_delay"
 CONF_POWER_SENSOR_RESTORE_STATE = "power_sensor_restore_state"
@@ -36,6 +34,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required(CONF_DEVICE_CODE): cv.positive_int,
         vol.Required(CONF_CONTROLLER_DATA): get_controller_schema(vol, cv),
         vol.Optional(CONF_DELAY, default=DEFAULT_DELAY): cv.positive_float,
+        vol.Optional(
+            CONF_OPTIMISTIC_STATE, default=DEFAULT_OPTIMISTIC_STATE
+        ): cv.boolean,
         vol.Optional(CONF_POWER_SENSOR): cv.entity_id,
         vol.Optional(
             CONF_POWER_SENSOR_DELAY, default=DEFAULT_POWER_SENSOR_DELAY
@@ -132,6 +133,7 @@ class SmartIR:
         self._device_code = config.get(CONF_DEVICE_CODE)
         self._controller_data = config.get(CONF_CONTROLLER_DATA)
         self._delay = config.get(CONF_DELAY)
+        self._optimistic_state = config.get(CONF_OPTIMISTIC_STATE)
         self._power_sensor = config.get(CONF_POWER_SENSOR)
         self._power_sensor_delay = config.get(CONF_POWER_SENSOR_DELAY)
         self._power_sensor_restore_state = config.get(CONF_POWER_SENSOR_RESTORE_STATE)
@@ -140,6 +142,7 @@ class SmartIR:
         self._on_by_remote = False
         self._power_sensor_check_expect = None
         self._power_sensor_check_cancel = None
+        self._update_entity = None
 
         self._manufacturer = device_data["manufacturer"]
         self._supported_models = device_data["supportedModels"]
@@ -190,12 +193,14 @@ class SmartIR:
         if new_state.state == STATE_ON and self._state != STATE_ON:
             self._state = STATE_ON
             self._on_by_remote = True
-            await self._async_update_hvac_action()
+            if self._update_entity is not None:
+                await self._update_entity()
         elif new_state.state == STATE_OFF:
             self._on_by_remote = False
             if self._state != STATE_OFF:
                 self._state = STATE_OFF
-                await self._async_update_hvac_action()
+                if self._update_entity is not None:
+                    await self._update_entity()
         self.async_write_ha_state()
 
     @callback
@@ -236,6 +241,57 @@ class SmartIR:
             self.hass, self._power_sensor_delay, _async_power_sensor_check
         )
         _LOGGER.debug("Scheduled power sensor check for '%s' state", state)
+
+    async def _async_power_on(self):
+        if "on" in self._commands.keys() and isinstance(self._commands["on"], str):
+            if (
+                self._power_sensor is not None or self._optimistic_state
+            ) and self._state == STATE_ON:
+                # prevent to send 'on' command if assumed state is on and we use power sensors or assumed state is optimistic
+                _LOGGER.debug(
+                    "As state is based on power sensors or optimistic state is set to 'True' and current assumed state is '%s', skipping sending '%s' command",
+                    self._state,
+                    "on",
+                )
+            elif (
+                "off" in self._commands.keys()
+                and isinstance(self._commands["off"], str)
+                and self._commands["off"] == self._commands["on"]
+                and self._state == STATE_ON
+            ):
+                # prevent to resend 'on' command if same as 'off' and device is already on
+                _LOGGER.debug(
+                    "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
+                    self._state,
+                    "on",
+                )
+            else:
+                # if on code is not present, the on bit can be still set later in the all operation codes
+                _LOGGER.debug("Found 'on' operation mode command.")
+                await self._controller.send(self._commands["on"])
+                await asyncio.sleep(self._delay)
+
+    async def _async_power_off(self):
+        if "off" in self._commands.keys() and isinstance(self._commands["off"], str):
+            if (
+                "on" in self._commands.keys()
+                and isinstance(self._commands["on"], str)
+                and self._commands["on"] == self._commands["off"]
+                and self._state == STATE_OFF
+            ):
+                # prevent to resend 'off' command if same as 'on' and device is already off
+                _LOGGER.debug(
+                    "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
+                    self._state,
+                    "off",
+                )
+            else:
+                _LOGGER.debug("Found 'off' operation mode command.")
+                await self._controller.send(self._commands["off"])
+                await asyncio.sleep(self._delay)
+        else:
+            _LOGGER.error("Missing device IR code for 'off' mode.")
+            return
 
     @property
     def unique_id(self):

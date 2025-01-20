@@ -169,49 +169,9 @@ class SmartIRLight(SmartIR, LightEntity, RestoreEntity):
 
             try:
                 if state == STATE_OFF:
-                    if "off" in self._commands.keys() and isinstance(
-                        self._commands["off"], str
-                    ):
-                        if (
-                            "on" in self._commands.keys()
-                            and isinstance(self._commands["on"], str)
-                            and self._commands["on"] == self._commands["off"]
-                            and self._state == STATE_OFF
-                        ):
-                            # prevent to resend 'off' command if same as 'on' and device is already off
-                            _LOGGER.debug(
-                                "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
-                                self._state,
-                                "off",
-                            )
-                        else:
-                            _LOGGER.debug("Found 'off' operation mode command.")
-                            await self._controller.send(self._commands["off"])
-                            await asyncio.sleep(self._delay)
-                    else:
-                        _LOGGER.error("Missing device IR code for 'off' mode.")
-                        return
+                    await self._async_power_off()
                 else:
-                    if "on" in self._commands.keys() and isinstance(
-                        self._commands["on"], str
-                    ):
-                        if (
-                            "off" in self._commands.keys()
-                            and isinstance(self._commands["off"], str)
-                            and self._commands["off"] == self._commands["on"]
-                            and self._state == STATE_ON
-                        ):
-                            # prevent to resend 'on' command if same as 'off' and device is already on
-                            _LOGGER.debug(
-                                "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
-                                self._state,
-                                "on",
-                            )
-                        else:
-                            # if on code is not present, the on bit can be still set later in the all operation codes
-                            _LOGGER.debug("Found 'on' operation mode command.")
-                            await self._controller.send(self._commands["on"])
-                            await asyncio.sleep(self._delay)
+                    await self._async_power_on()
 
                     if color_temp is not None:
                         if "colorTemperature" in self._commands and isinstance(
@@ -221,7 +181,8 @@ class SmartIRLight(SmartIR, LightEntity, RestoreEntity):
                                 color_temp, self._color_temp_list
                             )
                             _LOGGER.debug(
-                                "Changing color temp from '%s'K to '%s'K using found remote command for {final_color_temp}K",
+                                "Changing color temp from '%s'K to '%s'K using command found in 'colorTemperature' commands",
+                                self._color_temp,
                                 color_temp,
                             )
                             await self._controller.send(
@@ -253,7 +214,12 @@ class SmartIRLight(SmartIR, LightEntity, RestoreEntity):
                                 steps = len(self._color_temp_list)
 
                             _LOGGER.debug(
-                                "Changing color temp from '%s'K index {old_color_temp} to {target}K index {new_color_temp}"
+                                "Changing color temp from '%s'K index '%s' to '%s'K index '%s' using command '%s'",
+                                self._color_temp,
+                                old_color_temp_index,
+                                color_temp,
+                                new_color_temp_index,
+                                cmd,
                             )
                             while steps > 0:
                                 steps -= 1
@@ -273,8 +239,9 @@ class SmartIRLight(SmartIR, LightEntity, RestoreEntity):
                                 brightness, self._brightness_list
                             )
                             _LOGGER.debug(
-                                "Changing color temp from '%s'K to '%s'K using found remote command for {final_color_temp}K",
-                                color_temp,
+                                "Changing brightness from '%s' to '%s' using command found in 'brightness' commands",
+                                self._brightness,
+                                brightness,
                             )
                             await self._controller.send(
                                 self._commands["brightness"][str(brightness)]
@@ -305,7 +272,12 @@ class SmartIRLight(SmartIR, LightEntity, RestoreEntity):
                                 steps = len(self._brightness_list)
 
                             _LOGGER.debug(
-                                "Changing color temp from '%s'K index {old_color_temp} to {target}K index {new_color_temp}"
+                                "Changing brightness from '%s'K index '%s' to '%s'K index '%s' using command '%s'",
+                                self._brightness,
+                                old_brightness_index,
+                                brightness,
+                                new_brightness_index,
+                                cmd,
                             )
                             while steps > 0:
                                 steps -= 1
