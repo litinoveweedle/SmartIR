@@ -258,6 +258,7 @@ class SmartIR:
                 and isinstance(self._commands["off"], str)
                 and self._commands["off"] == self._commands["on"]
                 and self._state == STATE_ON
+                and self._optimistic_state
             ):
                 # prevent to resend 'on' command if same as 'off' and device is already on
                 _LOGGER.debug(
@@ -266,10 +267,14 @@ class SmartIR:
                     "on",
                 )
             else:
-                # if on code is not present, the on bit can be still set later in the all operation codes
-                _LOGGER.debug("Found 'on' operation mode command.")
+                _LOGGER.debug("Sending 'on' command.")
                 await self._controller.send(self._commands["on"])
                 await asyncio.sleep(self._delay)
+        else:
+            # if on code is not present, the on bit can be still set later in the all functional codes
+            _LOGGER.debug(
+                "Missing device IR code for 'on' command, this may not be and issue as an 'on' bit could be set in functional codes."
+            )
 
     async def _async_power_off(self):
         if "off" in self._commands.keys() and isinstance(self._commands["off"], str):
@@ -286,12 +291,11 @@ class SmartIR:
                     "off",
                 )
             else:
-                _LOGGER.debug("Found 'off' operation mode command.")
+                _LOGGER.debug("Sending 'off' command.")
                 await self._controller.send(self._commands["off"])
                 await asyncio.sleep(self._delay)
         else:
-            _LOGGER.error("Missing device IR code for 'off' mode.")
-            return
+            _LOGGER.error("Missing device IR code for 'off' command.")
 
     @property
     def unique_id(self):
