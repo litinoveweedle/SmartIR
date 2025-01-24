@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-import voluptuous as vol
+import voluptuous as vol  # type: ignore
 from numbers import Number
 
 from homeassistant.components.climate import ClimateEntity
@@ -176,6 +176,8 @@ class SmartIRClimate(SmartIR, ClimateEntity, RestoreEntity):
         if isinstance(self._swing_modes, list) and len(self._swing_modes):
             self._support_flags = self._support_flags | ClimateEntityFeature.SWING_MODE
             self._swing_mode = self._swing_modes[0]
+
+        self.__update_entity = self._async_update_hvac_action
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -493,52 +495,10 @@ class SmartIRClimate(SmartIR, ClimateEntity, RestoreEntity):
                         _LOGGER.debug("Found '%s' operation mode command.", off_mode)
                         await self._controller.send(self._commands[off_mode])
                         await asyncio.sleep(self._delay)
-                    elif "off" in self._commands.keys() and isinstance(
-                        self._commands["off"], str
-                    ):
-                        if (
-                            "on" in self._commands.keys()
-                            and isinstance(self._commands["on"], str)
-                            and self._commands["on"] == self._commands["off"]
-                            and self._state == STATE_OFF
-                        ):
-                            # prevent to resend 'off' command if same as 'on' and device is already off
-                            _LOGGER.debug(
-                                "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
-                                self._state,
-                                "off",
-                            )
-                        else:
-                            _LOGGER.debug("Found 'off' operation mode command.")
-                            await self._controller.send(self._commands["off"])
-                            await asyncio.sleep(self._delay)
                     else:
-                        _LOGGER.error(
-                            "Missing device IR code for 'off' or '%s' operation mode.",
-                            off_mode,
-                        )
-                        return
+                        await self._async_power_off()
                 else:
-                    if "on" in self._commands.keys() and isinstance(
-                        self._commands["on"], str
-                    ):
-                        if (
-                            "off" in self._commands.keys()
-                            and isinstance(self._commands["off"], str)
-                            and self._commands["off"] == self._commands["on"]
-                            and self._state == STATE_ON
-                        ):
-                            # prevent to resend 'on' command if same as 'off' and device is already on
-                            _LOGGER.debug(
-                                "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
-                                self._state,
-                                "on",
-                            )
-                        else:
-                            # if on code is not present, the on bit can be still set later in the all operation/fan codes"""
-                            _LOGGER.debug("Found 'on' operation mode command.")
-                            await self._controller.send(self._commands["on"])
-                            await asyncio.sleep(self._delay)
+                    await self._async_power_on()
 
                     commands = self._commands
                     if hvac_mode in commands.keys():
@@ -703,9 +663,7 @@ class SmartIRClimate(SmartIR, ClimateEntity, RestoreEntity):
                 self.async_write_ha_state()
 
             except Exception as e:
-                _LOGGER.exception(
-                    "Exception raised in the in the _send_command '%s'", e
-                )
+                _LOGGER.exception("Exception raised in the in the send_command '%s'", e)
 
     async def _async_temp_sensor_changed(
         self, event: Event[EventStateChangedData]

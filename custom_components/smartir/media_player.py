@@ -1,15 +1,15 @@
 import asyncio
 import logging
 
-import voluptuous as vol
+import voluptuous as vol  # type: ignore
 
 from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.components.media_player.const import (
     MediaPlayerEntityFeature,
     MediaType,
 )
-from homeassistant.const import CONF_NAME, STATE_OFF, STATE_ON, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, Event, EventStateChangedData
+from homeassistant.const import CONF_NAME, STATE_OFF, STATE_ON
+from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
@@ -51,7 +51,7 @@ async def async_setup_platform(
     async_add_entities([SmartIRMediaPlayer(hass, config, device_data)])
 
 
-class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
+class SmartIRMediaPlayer(SmartIR, MediaPlayerEntity, RestoreEntity):
 
     def __init__(self, hass: HomeAssistant, config: ConfigType, device_data):
         # Initialize SmartIR device
@@ -169,36 +169,36 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
 
     async def async_turn_off(self):
         """Turn the media player off."""
-        await self._send_command(STATE_OFF, [])
+        await self.send_command(STATE_OFF, [])
 
     async def async_turn_on(self):
         """Turn the media player off."""
-        await self._send_command(STATE_ON, [])
+        await self.send_command(STATE_ON, [])
 
     async def async_media_previous_track(self):
         """Send previous track command."""
-        await self._send_command(self._state, [["previousChannel"]])
+        await self.send_command(self._state, [["previousChannel"]])
 
     async def async_media_next_track(self):
         """Send next track command."""
-        await self._send_command(self._state, [["nextChannel"]])
+        await self.send_command(self._state, [["nextChannel"]])
 
     async def async_volume_down(self):
         """Turn volume down for media player."""
-        await self._send_command(self._state, [["volumeDown"]])
+        await self.send_command(self._state, [["volumeDown"]])
 
     async def async_volume_up(self):
         """Turn volume up for media player."""
-        await self._send_command(self._state, [["volumeUp"]])
+        await self.send_command(self._state, [["volumeUp"]])
 
     async def async_mute_volume(self, mute):
         """Mute the volume."""
-        await self._send_command(self._state, [["mute"]])
+        await self.send_command(self._state, [["mute"]])
 
     async def async_select_source(self, source):
         """Select channel from source."""
         self._source = source
-        await self._send_command(self._state, [["sources", source]])
+        await self.send_command(self._state, [["sources", source]])
 
     async def async_play_media(self, media_type, media_id, **kwargs):
         """Support channel change through play_media service."""
@@ -213,9 +213,9 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
         commands = []
         for digit in media_id:
             commands.append(["sources", "Channel {}".format(digit)])
-        await self._send_command(STATE_ON, commands)
+        await self.send_command(STATE_ON, commands)
 
-    async def _send_command(self, state, commands):
+    async def send_command(self, state, commands):
         async with self._temp_lock:
 
             if self._power_sensor and self._state != state:
@@ -223,49 +223,9 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
 
             try:
                 if state == STATE_OFF:
-                    if "off" in self._commands.keys() and isinstance(
-                        self._commands["off"], str
-                    ):
-                        if (
-                            "on" in self._commands.keys()
-                            and isinstance(self._commands["on"], str)
-                            and self._commands["on"] == self._commands["off"]
-                            and self._state == STATE_OFF
-                        ):
-                            # prevent to resend 'off' command if same as 'on' and device is already off
-                            _LOGGER.debug(
-                                "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
-                                self._state,
-                                "off",
-                            )
-                        else:
-                            _LOGGER.debug("Found 'off' operation mode command.")
-                            await self._controller.send(self._commands["off"])
-                            await asyncio.sleep(self._delay)
-                    else:
-                        _LOGGER.error("Missing device IR code for 'off' mode.")
-                        return
+                    await self._async_power_off()
                 else:
-                    if "on" in self._commands.keys() and isinstance(
-                        self._commands["on"], str
-                    ):
-                        if (
-                            "off" in self._commands.keys()
-                            and isinstance(self._commands["off"], str)
-                            and self._commands["off"] == self._commands["on"]
-                            and self._state == STATE_ON
-                        ):
-                            # prevent to resend 'on' command if same as 'off' and device is already on
-                            _LOGGER.debug(
-                                "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
-                                self._state,
-                                "on",
-                            )
-                        else:
-                            # if on code is not present, the on bit can be still set later in the all operation/fan codes"""
-                            _LOGGER.debug("Found 'on' operation mode command.")
-                            await self._controller.send(self._commands["on"])
-                            await asyncio.sleep(self._delay)
+                    await self._async_power_on()
 
                     for keys in commands:
                         data = self._commands
@@ -300,6 +260,4 @@ class SmartIRMediaPlayer(MediaPlayerEntity, RestoreEntity):
                 self.async_write_ha_state()
 
             except Exception as e:
-                _LOGGER.exception(
-                    "Exception raised in the in the _send_command '%s'", e
-                )
+                _LOGGER.exception("Exception raised in the in the send_command '%s'", e)

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-import voluptuous as vol
+import voluptuous as vol  # type: ignore
 
 from homeassistant.components.fan import (
     FanEntity,
@@ -9,8 +9,8 @@ from homeassistant.components.fan import (
     DIRECTION_REVERSE,
     DIRECTION_FORWARD,
 )
-from homeassistant.const import CONF_NAME, STATE_OFF, STATE_ON, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, Event, EventStateChangedData
+from homeassistant.const import CONF_NAME, STATE_OFF, STATE_ON
+from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
@@ -52,7 +52,7 @@ async def async_setup_platform(
     async_add_entities([SmartIRFan(hass, config, device_data)])
 
 
-class SmartIRFan(FanEntity, RestoreEntity):
+class SmartIRFan(SmartIR, FanEntity, RestoreEntity):
     _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, hass: HomeAssistant, config: ConfigType, device_data):
@@ -161,7 +161,7 @@ class SmartIRFan(FanEntity, RestoreEntity):
             state = STATE_ON
             speed = percentage_to_ordered_list_item(self._speed_list, percentage)
 
-        await self._send_command(
+        await self.send_command(
             state, speed, self._current_direction, self._oscillating
         )
 
@@ -170,7 +170,7 @@ class SmartIRFan(FanEntity, RestoreEntity):
         if not self._support_flags & FanEntityFeature.OSCILLATE:
             return
 
-        await self._send_command(
+        await self.send_command(
             self._state, self._speed, self._current_direction, oscillating
         )
 
@@ -179,7 +179,7 @@ class SmartIRFan(FanEntity, RestoreEntity):
         if not self._support_flags & FanEntityFeature.DIRECTION:
             return
 
-        await self._send_command(self._state, self._speed, direction, self._oscillating)
+        await self.send_command(self._state, self._speed, direction, self._oscillating)
 
     async def async_turn_on(
         self, percentage: int = None, preset_mode: str = None, **kwargs
@@ -194,7 +194,7 @@ class SmartIRFan(FanEntity, RestoreEntity):
         """Turn off the fan."""
         await self.async_set_percentage(0)
 
-    async def _send_command(self, state, speed, direction, oscillate):
+    async def send_command(self, state, speed, direction, oscillate):
         async with self._temp_lock:
 
             if self._power_sensor and self._state != state:
@@ -202,49 +202,9 @@ class SmartIRFan(FanEntity, RestoreEntity):
 
             try:
                 if state == STATE_OFF:
-                    if "off" in self._commands.keys() and isinstance(
-                        self._commands["off"], str
-                    ):
-                        if (
-                            "on" in self._commands.keys()
-                            and isinstance(self._commands["on"], str)
-                            and self._commands["on"] == self._commands["off"]
-                            and self._state == STATE_OFF
-                        ):
-                            # prevent to resend 'off' command if same as 'on' and device is already off
-                            _LOGGER.debug(
-                                "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
-                                self._state,
-                                "off",
-                            )
-                        else:
-                            _LOGGER.debug("Found 'off' operation mode command.")
-                            await self._controller.send(self._commands["off"])
-                            await asyncio.sleep(self._delay)
-                    else:
-                        _LOGGER.error("Missing device IR code for 'off' mode.")
-                        return
+                    await self._async_power_off()
                 else:
-                    if "on" in self._commands.keys() and isinstance(
-                        self._commands["on"], str
-                    ):
-                        if (
-                            "off" in self._commands.keys()
-                            and isinstance(self._commands["off"], str)
-                            and self._commands["off"] == self._commands["on"]
-                            and self._state == STATE_ON
-                        ):
-                            # prevent to resend 'on' command if same as 'off' and device is already on
-                            _LOGGER.debug(
-                                "As 'on' and 'off' commands are identical and device is already in requested '%s' state, skipping sending '%s' command",
-                                self._state,
-                                "on",
-                            )
-                        else:
-                            # if on code is not present, the on bit can be still set later in the all operation/fan codes"""
-                            _LOGGER.debug("Found 'on' operation mode command.")
-                            await self._controller.send(self._commands["on"])
-                            await asyncio.sleep(self._delay)
+                    await self._async_power_on()
 
                     if oscillate:
                         if "oscillate" in self._commands:
@@ -281,6 +241,4 @@ class SmartIRFan(FanEntity, RestoreEntity):
                 self.async_write_ha_state()
 
             except Exception as e:
-                _LOGGER.exception(
-                    "Exception raised in the in the _send_command '%s'", e
-                )
+                _LOGGER.exception("Exception raised in the in the send_command '%s'", e)
